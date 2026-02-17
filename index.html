@@ -689,114 +689,49 @@
         }
 
         async function sendMessage() {
-            const input = document.getElementById('chatInput');
-            const message = input.value.trim();
-            
-            if (!message) return;
+    const input = document.getElementById('chatInput');
+    const message = input.value.trim();
+    
+    // Recuperar la clave del almacenamiento local cada vez que se envía
+    const apiKey = localStorage.getItem('gemini_api_key');
 
-            // Validar solo que exista algo
-            if (!CLAVE_DE_API_DE_GEMINI || CLAVE_DE_API_DE_GEMINI === '') {
-                addMessage('ai', '<div class="message-label">[ERROR]</div><div>⚠️ API Key no configurada. Usa el botón "⚙️ CONFIG API" para configurarla.<br><br>Obtén tu clave gratis en: <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #00ff41;">Google AI Studio</a></div>');
-                openConfigModal();
-                return;
-            }
+    if (!message) return;
 
-            // Add user message
-            addMessage('user', message);
-            input.value = '';
+    if (!apiKey) {
+        addMessage('ai', '<div class="message-label">[ERROR]</div>⚠️ API Key no configurada.');
+        openConfigModal();
+        return;
+    }
 
-            // Add loading message
-            const loadingMsg = addMessage('ai', 'Analizando<span class="loading">...</span>');
+    addMessage('user', message);
+    input.value = '';
 
-            // Función auxiliar para hacer request a Gemini
-            async function tryGeminiRequest(model) {
-                const apiUrl = getGeminiApiUrl(model);
-                console.log(`🔌 Intentando con modelo: ${model}`);
-                console.log('📡 URL:', `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`);
-                
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        contents: [{
-                            parts: [{
-                                text: `Eres un experto trader especializado en Smart Money Concepts (SMC) para XAUUSD. ${message}`
-                            }]
-                        }],
-                        generationConfig: {
-                            temperature: 0.7,
-                            topK: 40,
-                            topP: 0.95,
-                            maxOutputTokens: 1000
-                        },
-                        safetySettings: [
-                            {
-                                category: "HARM_CATEGORY_HARASSMENT",
-                                threshold: "BLOCK_NONE"
-                            },
-                            {
-                                category: "HARM_CATEGORY_HATE_SPEECH",
-                                threshold: "BLOCK_NONE"
-                            },
-                            {
-                                category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                                threshold: "BLOCK_NONE"
-                            },
-                            {
-                                category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-                                threshold: "BLOCK_NONE"
-                            }
-                        ]
-                    })
-                });
+    const loadingMsg = addMessage('ai', 'Analizando<span class="loading">...</span>');
 
-                return response;
-            }
+    try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
 
-            try {
-                console.log('🔑 Key length:', CLAVE_DE_API_DE_GEMINI.length);
-                
-                // Intentar con Gemini 1.5 Flash primero
-                let response = await tryGeminiRequest('gemini-1.5-flash');
-                let modelUsed = 'Gemini 1.5 Flash';
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: message }] }]
+            })
+        });
 
-                console.log('📥 Respuesta HTTP:', response.status, response.statusText);
+        const data = await response.json();
 
-                // Si falla, intentar con Gemini 1.5 Pro como fallback
-                if (!response.ok && (response.status === 404 || response.status === 403)) {
-                    console.log('⚠️ Flash no disponible, intentando con Pro...');
-                    response = await tryGeminiRequest('gemini-1.5-pro');
-                    modelUsed = 'Gemini 1.5 Pro';
-                    console.log('📥 Respuesta HTTP (Pro):', response.status, response.statusText);
-                }
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('❌ Error completo:', errorText);
-                    
-                    // Mostrar el error real de Google sin filtros
-                    loadingMsg.innerHTML = `<div class="message-label">[ERROR ${response.status}]</div><div>❌ ${response.statusText}<br><br>Respuesta de Google:<br><pre style="font-size: 0.8rem; opacity: 0.8; white-space: pre-wrap;">${errorText.substring(0, 300)}</pre><br>Verifica tu API Key con el botón "⚙️ CONFIG API".</div>`;
-                    return;
-                }
-
-                const data = await response.json();
-                console.log(`✅ Respuesta exitosa de ${modelUsed}`);
-                
-                if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-                    const aiResponse = data.candidates[0].content.parts[0].text;
-                    loadingMsg.innerHTML = `<div class="message-label">[${modelUsed.toUpperCase()}]</div><div>${aiResponse}</div>`;
-                } else if (data.error) {
-                    loadingMsg.innerHTML = `<div class="message-label">[ERROR]</div><div>Error de API: ${data.error.message || 'Error desconocido'}<br><br>Usa el botón "⚙️ CONFIG API" para verificar tu clave.</div>`;
-                } else {
-                    loadingMsg.innerHTML = `<div class="message-label">[ERROR]</div><div>Respuesta inesperada de Gemini.<br><br>Usa el botón "⚙️ CONFIG API" para verificar tu clave.</div>`;
-                }
-            } catch (error) {
-                console.error('❌ Error en sendMessage:', error);
-                loadingMsg.innerHTML = `<div class="message-label">[ERROR]</div><div>Error de conexión: ${error.message}<br><br>Verifica tu API Key con el botón "⚙️ CONFIG API".</div>`;
-            }
+        if (response.ok) {
+            const aiResponse = data.candidates[0].content.parts[0].text;
+            loadingMsg.innerHTML = `<div class="message-label">[GEMINI]</div>${aiResponse}`;
+        } else {
+            throw new Error(data.error ? data.error.message : 'Error desconocido');
         }
+    } catch (error) {
+        loadingMsg.innerHTML = `<div class="message-label">[ERROR]</div>❌ ${error.message}`;
+        console.error("Error en la terminal:", error);
+    }
+}
 
         function addMessage(type, content) {
             const messagesDiv = document.getElementById('chatMessages');
