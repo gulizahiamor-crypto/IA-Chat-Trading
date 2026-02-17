@@ -652,9 +652,9 @@
         }
 
         // Función para obtener la URL de API dinámica con modelo específico
-        function getGeminiApiUrl(model = 'gemini-pro') {
+        function getGeminiApiUrl(model = 'gemini-1.5-pro') {
             // Concatenación directa - v1beta API estándar
-            return `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=`;
+            return `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=`;
         }
 
         // Modal Management
@@ -709,7 +709,7 @@
     const loadingMsg = addMessage('ai', 'Analizando<span class="loading">...</span>');
 
     try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`;
 
         const response = await fetch(url, {
             method: 'POST',
