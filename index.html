@@ -415,13 +415,122 @@
             0%, 50%, 100% { opacity: 1; }
             25%, 75% { opacity: 0.3; }
         }
+
+        /* API Key Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            animation: fadeIn 0.3s;
+        }
+
+        .modal-content {
+            background: #000000;
+            border: 3px solid #00ff41;
+            border-radius: 10px;
+            margin: 15% auto;
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 0 40px #00ff41;
+            animation: slideDown 0.3s;
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            font-size: 1.5rem;
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px #00ff41;
+        }
+
+        .modal-input {
+            width: 100%;
+            background: #001100;
+            border: 2px solid #00ff41;
+            color: #00ff41;
+            padding: 12px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+
+        .modal-input:focus {
+            outline: none;
+            box-shadow: 0 0 15px #00ff41;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .modal-info {
+            text-align: center;
+            font-size: 0.85rem;
+            opacity: 0.7;
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+
+        .config-btn {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid #00ff41;
+            border-radius: 5px;
+            padding: 10px 15px;
+            font-size: 0.8rem;
+            box-shadow: 0 0 15px #00ff41;
+            z-index: 1000;
+            cursor: pointer;
+            color: #00ff41;
+            font-family: 'Courier New', monospace;
+            transition: all 0.3s;
+        }
+
+        .config-btn:hover {
+            box-shadow: 0 0 25px #00ff41;
+            transform: scale(1.05);
+        }
     </style>
 </head>
 <body>
+    <!-- Config Button -->
+    <button class="config-btn" onclick="openConfigModal()">⚙️ CONFIG API</button>
+
     <!-- Status Indicator -->
     <div class="status-indicator">
         <span class="status-dot"></span>
         <span>SISTEMA ACTIVO</span>
+    </div>
+
+    <!-- API Key Modal -->
+    <div id="apiKeyModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">🔑 CONFIGURACIÓN API GEMINI</div>
+            <div class="modal-info">
+                Ingresa tu API Key de Google Gemini.<br>
+                Obtén tu clave en: <a href="https://makersuite.google.com/app/apikey" target="_blank" style="color: #00ff41;">Google AI Studio</a>
+            </div>
+            <input type="text" id="apiKeyInput" class="modal-input" placeholder="AIza..." value="">
+            <div class="modal-buttons">
+                <button class="btn" onclick="saveApiKey()">GUARDAR</button>
+                <button class="btn" onclick="closeConfigModal()">CANCELAR</button>
+            </div>
+        </div>
     </div>
 
     <div class="container">
@@ -519,8 +628,43 @@
         // ====================
         // GEMINI AI CHAT
         // ====================
-        const GEMINI_API_KEY = 'AIzaSyBMuWEeFykC65XGlMcZck_JbaWZpPJ3UDw';
-        const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+        // Sistema de gestión de API Key con localStorage
+        let CLAVE_DE_API_DE_GEMINI = localStorage.getItem('gemini_api_key') || 'AIzaSyBMuWEeFykC65XGlMcZck_JbaWZpPJ3UDw';
+
+        // Función para obtener la URL de API dinámica
+        function getGeminiApiUrl() {
+            return `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${CLAVE_DE_API_DE_GEMINI}`;
+        }
+
+        // Modal Management
+        function openConfigModal() {
+            document.getElementById('apiKeyModal').style.display = 'block';
+            document.getElementById('apiKeyInput').value = CLAVE_DE_API_DE_GEMINI;
+        }
+
+        function closeConfigModal() {
+            document.getElementById('apiKeyModal').style.display = 'none';
+        }
+
+        function saveApiKey() {
+            const newKey = document.getElementById('apiKeyInput').value.trim();
+            if (newKey && newKey.startsWith('AIza')) {
+                CLAVE_DE_API_DE_GEMINI = newKey;
+                localStorage.setItem('gemini_api_key', newKey);
+                closeConfigModal();
+                addMessage('ai', '<div class="message-label">[SISTEMA]</div><div>✅ API Key actualizada correctamente. La conexión está lista.</div>');
+            } else {
+                alert('⚠️ Por favor ingresa una API Key válida que comience con "AIza"');
+            }
+        }
+
+        // Cerrar modal al hacer clic fuera
+        window.onclick = function(event) {
+            const modal = document.getElementById('apiKeyModal');
+            if (event.target == modal) {
+                closeConfigModal();
+            }
+        }
 
         async function sendMessage() {
             const input = document.getElementById('chatInput');
@@ -536,7 +680,7 @@
             const loadingMsg = addMessage('ai', 'Analizando<span class="loading">...</span>');
 
             try {
-                const response = await fetch(GEMINI_API_URL, {
+                const response = await fetch(getGeminiApiUrl(), {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -599,7 +743,7 @@
             output.innerHTML = '<div style="text-align: center;">⚡ GENERANDO SEÑAL SMC<span class="loading">...</span></div>';
 
             try {
-                const response = await fetch(GEMINI_API_URL, {
+                const response = await fetch(getGeminiApiUrl(), {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
