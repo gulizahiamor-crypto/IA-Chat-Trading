@@ -652,9 +652,9 @@
         }
 
         // Función para obtener la URL de API dinámica con modelo específico
-        function getGeminiApiUrl(model = 'gemini-1.5-flash') {
-            // Concatenación directa - v1beta API estable
-            return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${CLAVE_DE_API_DE_GEMINI}`;
+        function getGeminiApiUrl(model = 'gemini-1.5-flash-latest') {
+            // Concatenación directa - v1beta API estable con latest
+            return `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=`;
         }
 
         // Modal Management
