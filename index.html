@@ -651,10 +651,10 @@
             return true;
         }
 
-        // Función para obtener la URL de API dinámica
-        function getGeminiApiUrl() {
-            // Concatenación directa sin validaciones previas
-            return `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${CLAVE_DE_API_DE_GEMINI}`;
+        // Función para obtener la URL de API dinámica con modelo específico
+        function getGeminiApiUrl(model = 'gemini-1.5-flash') {
+            // Concatenación directa - v1beta API estable
+            return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${CLAVE_DE_API_DE_GEMINI}`;
         }
 
         // Modal Management
@@ -708,11 +708,11 @@
             // Add loading message
             const loadingMsg = addMessage('ai', 'Analizando<span class="loading">...</span>');
 
-            try {
-                const apiUrl = getGeminiApiUrl();
-                console.log('🔌 Conectando con Gemini API...');
-                console.log('📡 URL base:', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent');
-                console.log('🔑 Key length:', CLAVE_DE_API_DE_GEMINI.length);
+            // Función auxiliar para hacer request a Gemini
+            async function tryGeminiRequest(model) {
+                const apiUrl = getGeminiApiUrl(model);
+                console.log(`🔌 Intentando con modelo: ${model}`);
+                console.log('📡 URL:', `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`);
                 
                 const response = await fetch(apiUrl, {
                     method: 'POST',
@@ -727,28 +727,66 @@
                         }],
                         generationConfig: {
                             temperature: 0.7,
+                            topK: 40,
+                            topP: 0.95,
                             maxOutputTokens: 1000
-                        }
+                        },
+                        safetySettings: [
+                            {
+                                category: "HARM_CATEGORY_HARASSMENT",
+                                threshold: "BLOCK_NONE"
+                            },
+                            {
+                                category: "HARM_CATEGORY_HATE_SPEECH",
+                                threshold: "BLOCK_NONE"
+                            },
+                            {
+                                category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                                threshold: "BLOCK_NONE"
+                            },
+                            {
+                                category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+                                threshold: "BLOCK_NONE"
+                            }
+                        ]
                     })
                 });
 
+                return response;
+            }
+
+            try {
+                console.log('🔑 Key length:', CLAVE_DE_API_DE_GEMINI.length);
+                
+                // Intentar con Gemini 1.5 Flash primero
+                let response = await tryGeminiRequest('gemini-1.5-flash');
+                let modelUsed = 'Gemini 1.5 Flash';
+
                 console.log('📥 Respuesta HTTP:', response.status, response.statusText);
+
+                // Si falla, intentar con Gemini 1.5 Pro como fallback
+                if (!response.ok && (response.status === 404 || response.status === 403)) {
+                    console.log('⚠️ Flash no disponible, intentando con Pro...');
+                    response = await tryGeminiRequest('gemini-1.5-pro');
+                    modelUsed = 'Gemini 1.5 Pro';
+                    console.log('📥 Respuesta HTTP (Pro):', response.status, response.statusText);
+                }
 
                 if (!response.ok) {
                     const errorText = await response.text();
                     console.error('❌ Error completo:', errorText);
                     
                     // Mostrar el error real de Google sin filtros
-                    loadingMsg.innerHTML = `<div class="message-label">[ERROR ${response.status}]</div><div>❌ ${response.statusText}<br><br>Respuesta de Google:<br><pre style="font-size: 0.8rem; opacity: 0.8;">${errorText.substring(0, 300)}</pre><br>Verifica tu API Key con el botón "⚙️ CONFIG API".</div>`;
+                    loadingMsg.innerHTML = `<div class="message-label">[ERROR ${response.status}]</div><div>❌ ${response.statusText}<br><br>Respuesta de Google:<br><pre style="font-size: 0.8rem; opacity: 0.8; white-space: pre-wrap;">${errorText.substring(0, 300)}</pre><br>Verifica tu API Key con el botón "⚙️ CONFIG API".</div>`;
                     return;
                 }
 
                 const data = await response.json();
-                console.log('✅ Respuesta exitosa de Gemini');
+                console.log(`✅ Respuesta exitosa de ${modelUsed}`);
                 
                 if (data.candidates && data.candidates[0] && data.candidates[0].content) {
                     const aiResponse = data.candidates[0].content.parts[0].text;
-                    loadingMsg.innerHTML = `<div class="message-label">[GEMINI]</div><div>${aiResponse}</div>`;
+                    loadingMsg.innerHTML = `<div class="message-label">[${modelUsed.toUpperCase()}]</div><div>${aiResponse}</div>`;
                 } else if (data.error) {
                     loadingMsg.innerHTML = `<div class="message-label">[ERROR]</div><div>Error de API: ${data.error.message || 'Error desconocido'}<br><br>Usa el botón "⚙️ CONFIG API" para verificar tu clave.</div>`;
                 } else {
@@ -798,10 +836,10 @@
                 return;
             }
 
-            try {
-                const apiUrl = getGeminiApiUrl();
-                console.log('🎯 Generando señal SMC...');
-                console.log('🔑 Key length:', CLAVE_DE_API_DE_GEMINI.length);
+            // Función auxiliar para hacer request a Gemini
+            async function tryGeminiSignalRequest(model) {
+                const apiUrl = getGeminiApiUrl(model);
+                console.log(`🎯 Generando señal con: ${model}`);
                 
                 const response = await fetch(apiUrl, {
                     method: 'POST',
@@ -830,35 +868,75 @@ RR: [ratio]`
                         }],
                         generationConfig: {
                             temperature: 0.8,
+                            topK: 40,
+                            topP: 0.95,
                             maxOutputTokens: 500
-                        }
+                        },
+                        safetySettings: [
+                            {
+                                category: "HARM_CATEGORY_HARASSMENT",
+                                threshold: "BLOCK_NONE"
+                            },
+                            {
+                                category: "HARM_CATEGORY_HATE_SPEECH",
+                                threshold: "BLOCK_NONE"
+                            },
+                            {
+                                category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                                threshold: "BLOCK_NONE"
+                            },
+                            {
+                                category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+                                threshold: "BLOCK_NONE"
+                            }
+                        ]
                     })
                 });
 
+                return response;
+            }
+
+            try {
+                console.log('🔑 Key length:', CLAVE_DE_API_DE_GEMINI.length);
+                
+                // Intentar con Gemini 1.5 Flash primero
+                let response = await tryGeminiSignalRequest('gemini-1.5-flash');
+                let modelUsed = 'Flash';
+
                 console.log('📥 Respuesta HTTP (Señal):', response.status);
+
+                // Si falla, intentar con Gemini 1.5 Pro como fallback
+                if (!response.ok && (response.status === 404 || response.status === 403)) {
+                    console.log('⚠️ Flash no disponible, intentando con Pro...');
+                    response = await tryGeminiSignalRequest('gemini-1.5-pro');
+                    modelUsed = 'Pro';
+                    console.log('📥 Respuesta HTTP (Pro):', response.status);
+                }
 
                 if (!response.ok) {
                     const errorText = await response.text();
                     console.error('❌ Error completo:', errorText);
                     
                     // Mostrar el error real de Google sin filtros
-                    output.innerHTML = `<div style="color: #ff0000;">❌ ERROR ${response.status}<br><br>Respuesta:<br><pre style="font-size: 0.75rem;">${errorText.substring(0, 200)}</pre><br>Usa "⚙️ CONFIG API" para verificar.</div>`;
+                    output.innerHTML = `<div style="color: #ff0000;">❌ ERROR ${response.status}<br><br>Respuesta:<br><pre style="font-size: 0.75rem; white-space: pre-wrap;">${errorText.substring(0, 200)}</pre><br>Usa "⚙️ CONFIG API" para verificar.</div>`;
                     return;
                 }
 
                 const data = await response.json();
-                console.log('✅ Señal generada exitosamente');
+                console.log(`✅ Señal generada con Gemini 1.5 ${modelUsed}`);
                 
                 if (data.candidates && data.candidates[0] && data.candidates[0].content) {
                     let signal = data.candidates[0].content.parts[0].text;
                     
                     // Format signal output
+                    signal = signal.replace(/SEÑAL:/g, '<span class="entry">SEÑAL:</span>');
                     signal = signal.replace(/ENTRADA:/g, '<span class="entry">ENTRADA:</span>');
                     signal = signal.replace(/STOP LOSS:/g, '<span class="sl">STOP LOSS:</span>');
                     signal = signal.replace(/TAKE PROFIT:/g, '<span class="tp">TAKE PROFIT:</span>');
                     signal = signal.replace(/\n/g, '<br>');
                     
-                    output.innerHTML = signal;
+                    // Añadir badge del modelo usado
+                    output.innerHTML = `<div style="text-align: right; font-size: 0.7rem; opacity: 0.7; margin-bottom: 10px;">Gemini 1.5 ${modelUsed}</div>${signal}`;
                 } else if (data.error) {
                     output.innerHTML = `<div style="color: #ff0000;">Error de API: ${data.error.message || 'Error desconocido'}<br><br>Usa "⚙️ CONFIG API" para verificar tu clave.</div>`;
                 } else {
