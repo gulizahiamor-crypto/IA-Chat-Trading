@@ -1,0 +1,42 @@
+# API Keys y secretos
+*.key
+*.env
+.env
+.env.local
+.env.*.local
+secrets.json
+config/secrets.json
+
+# Archivos de configuración con claves
+api-keys.txt
+credentials.json
+
+# Node modules (si se usa npm en el futuro)
+node_modules/
+package-lock.json
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Carpetas de build (si se agregan en el futuro)
+dist/
+build/
+.cache/
+
+# Vercel
+.vercel
