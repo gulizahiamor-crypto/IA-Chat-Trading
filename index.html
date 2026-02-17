@@ -651,12 +651,9 @@
             return true;
         }
 
-        // Función para obtener la URL de API dinámica con validación
+        // Función para obtener la URL de API dinámica
         function getGeminiApiUrl() {
-            if (!CLAVE_DE_API_DE_GEMINI || CLAVE_DE_API_DE_GEMINI === 'undefined' || CLAVE_DE_API_DE_GEMINI === '') {
-                throw new Error('API Key no configurada');
-            }
-            // URL oficial de Google Generative AI API v1beta
+            // Concatenación directa sin validaciones previas
             return `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${CLAVE_DE_API_DE_GEMINI}`;
         }
 
@@ -672,13 +669,14 @@
 
         function saveApiKey() {
             const newKey = document.getElementById('apiKeyInput').value.trim();
-            if (newKey && newKey.startsWith('AIza')) {
+            if (newKey && newKey.length > 20) {
                 CLAVE_DE_API_DE_GEMINI = newKey;
                 localStorage.setItem('gemini_api_key', newKey);
                 closeConfigModal();
-                addMessage('ai', '<div class="message-label">[SISTEMA]</div><div>✅ API Key actualizada correctamente. La conexión está lista. Intenta enviar un mensaje de prueba.</div>');
+                // Recargar la página para limpiar errores previos
+                location.reload();
             } else {
-                alert('⚠️ Por favor ingresa una API Key válida de Google Gemini que comience con "AIza".\n\nObtén tu clave en: https://aistudio.google.com/app/apikey');
+                alert('⚠️ Por favor ingresa una API Key válida de Google Gemini.\n\nObtén tu clave en: https://aistudio.google.com/app/apikey');
             }
         }
 
@@ -696,8 +694,8 @@
             
             if (!message) return;
 
-            // Validar API Key antes de enviar
-            if (!CLAVE_DE_API_DE_GEMINI || CLAVE_DE_API_DE_GEMINI === 'undefined' || CLAVE_DE_API_DE_GEMINI === '') {
+            // Validar solo que exista algo
+            if (!CLAVE_DE_API_DE_GEMINI || CLAVE_DE_API_DE_GEMINI === '') {
                 addMessage('ai', '<div class="message-label">[ERROR]</div><div>⚠️ API Key no configurada. Usa el botón "⚙️ CONFIG API" para configurarla.<br><br>Obtén tu clave gratis en: <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #00ff41;">Google AI Studio</a></div>');
                 openConfigModal();
                 return;
@@ -713,7 +711,8 @@
             try {
                 const apiUrl = getGeminiApiUrl();
                 console.log('🔌 Conectando con Gemini API...');
-                console.log('📡 URL:', apiUrl.replace(CLAVE_DE_API_DE_GEMINI, 'AIza***'));
+                console.log('📡 URL base:', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent');
+                console.log('🔑 Key length:', CLAVE_DE_API_DE_GEMINI.length);
                 
                 const response = await fetch(apiUrl, {
                     method: 'POST',
@@ -737,17 +736,10 @@
 
                 if (!response.ok) {
                     const errorText = await response.text();
-                    console.error('❌ Error de API:', errorText);
+                    console.error('❌ Error completo:', errorText);
                     
-                    if (response.status === 404) {
-                        loadingMsg.innerHTML = `<div class="message-label">[ERROR 404]</div><div>❌ API Key inválida o sin permisos.<br><br>Posibles causas:<br>1. La API Key no existe o fue eliminada<br>2. No tiene permisos para Gemini API<br>3. La API no está habilitada en tu proyecto<br><br>Por favor, genera una nueva clave en: <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #00ff41;">Google AI Studio</a> y configúrala con el botón "⚙️ CONFIG API".</div>`;
-                        openConfigModal();
-                    } else if (response.status === 403) {
-                        loadingMsg.innerHTML = `<div class="message-label">[ERROR 403]</div><div>❌ Acceso denegado. Verifica que tu API Key tenga permisos para Gemini 1.5 Flash.<br><br>Usa el botón "⚙️ CONFIG API" para configurar una nueva clave.</div>`;
-                        openConfigModal();
-                    } else {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                    }
+                    // Mostrar el error real de Google sin filtros
+                    loadingMsg.innerHTML = `<div class="message-label">[ERROR ${response.status}]</div><div>❌ ${response.statusText}<br><br>Respuesta de Google:<br><pre style="font-size: 0.8rem; opacity: 0.8;">${errorText.substring(0, 300)}</pre><br>Verifica tu API Key con el botón "⚙️ CONFIG API".</div>`;
                     return;
                 }
 
@@ -759,10 +751,8 @@
                     loadingMsg.innerHTML = `<div class="message-label">[GEMINI]</div><div>${aiResponse}</div>`;
                 } else if (data.error) {
                     loadingMsg.innerHTML = `<div class="message-label">[ERROR]</div><div>Error de API: ${data.error.message || 'Error desconocido'}<br><br>Usa el botón "⚙️ CONFIG API" para verificar tu clave.</div>`;
-                    openConfigModal();
                 } else {
-                    loadingMsg.innerHTML = `<div class="message-label">[ERROR]</div><div>No se pudo obtener respuesta de Gemini. Verifica tu API Key con el botón "⚙️ CONFIG API".</div>`;
-                    openConfigModal();
+                    loadingMsg.innerHTML = `<div class="message-label">[ERROR]</div><div>Respuesta inesperada de Gemini.<br><br>Usa el botón "⚙️ CONFIG API" para verificar tu clave.</div>`;
                 }
             } catch (error) {
                 console.error('❌ Error en sendMessage:', error);
@@ -801,8 +791,8 @@
             const output = document.getElementById('signalOutput');
             output.innerHTML = '<div style="text-align: center;">⚡ GENERANDO SEÑAL SMC<span class="loading">...</span></div>';
 
-            // Validar API Key antes de generar señal
-            if (!CLAVE_DE_API_DE_GEMINI || CLAVE_DE_API_DE_GEMINI === 'undefined' || CLAVE_DE_API_DE_GEMINI === '') {
+            // Validar solo que exista algo
+            if (!CLAVE_DE_API_DE_GEMINI || CLAVE_DE_API_DE_GEMINI === '') {
                 output.innerHTML = '<div style="color: #ff0000;">⚠️ API Key no configurada. Usa el botón "⚙️ CONFIG API".<br><br><a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #00ff41;">Obtén tu clave aquí</a></div>';
                 openConfigModal();
                 return;
@@ -811,6 +801,7 @@
             try {
                 const apiUrl = getGeminiApiUrl();
                 console.log('🎯 Generando señal SMC...');
+                console.log('🔑 Key length:', CLAVE_DE_API_DE_GEMINI.length);
                 
                 const response = await fetch(apiUrl, {
                     method: 'POST',
@@ -848,17 +839,10 @@ RR: [ratio]`
 
                 if (!response.ok) {
                     const errorText = await response.text();
-                    console.error('❌ Error de API:', errorText);
+                    console.error('❌ Error completo:', errorText);
                     
-                    if (response.status === 404) {
-                        output.innerHTML = '<div style="color: #ff0000;">❌ ERROR 404: API Key inválida.<br><br>Genera una nueva clave en <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #00ff41;">Google AI Studio</a> y usa el botón "⚙️ CONFIG API".</div>';
-                        openConfigModal();
-                    } else if (response.status === 403) {
-                        output.innerHTML = '<div style="color: #ff0000;">❌ ERROR 403: Acceso denegado.<br><br>Verifica los permisos de tu API Key.</div>';
-                        openConfigModal();
-                    } else {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                    }
+                    // Mostrar el error real de Google sin filtros
+                    output.innerHTML = `<div style="color: #ff0000;">❌ ERROR ${response.status}<br><br>Respuesta:<br><pre style="font-size: 0.75rem;">${errorText.substring(0, 200)}</pre><br>Usa "⚙️ CONFIG API" para verificar.</div>`;
                     return;
                 }
 
@@ -877,10 +861,8 @@ RR: [ratio]`
                     output.innerHTML = signal;
                 } else if (data.error) {
                     output.innerHTML = `<div style="color: #ff0000;">Error de API: ${data.error.message || 'Error desconocido'}<br><br>Usa "⚙️ CONFIG API" para verificar tu clave.</div>`;
-                    openConfigModal();
                 } else {
                     output.innerHTML = '<div style="color: #ff0000;">Error al generar señal. Verifica tu API Key.</div>';
-                    openConfigModal();
                 }
             } catch (error) {
                 console.error('❌ Error en generateSignal:', error);
