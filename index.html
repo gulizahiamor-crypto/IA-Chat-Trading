@@ -652,9 +652,9 @@
         }
 
         // Función para obtener la URL de API dinámica con modelo específico
-        function getGeminiApiUrl(model = 'gemini-1.5-pro') {
-            // Concatenación directa - v1 API de producción
-            return `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent?key=`;
+        function getGeminiApiUrl(model = 'gemini-1.5-flash') {
+            // Concatenación directa - v1beta API estable
+            return `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=`;
         }
 
         // Modal Management
@@ -709,7 +709,7 @@
     const loadingMsg = addMessage('ai', 'Analizando<span class="loading">...</span>');
 
     try {
-        const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent?key=${apiKey}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
         const response = await fetch(url, {
             method: 'POST',
@@ -834,19 +834,11 @@ RR: [ratio]`
             try {
                 console.log('🔑 Key length:', CLAVE_DE_API_DE_GEMINI.length);
                 
-                // Intentar con Gemini 1.5 Flash primero
+                // Petición directa a Gemini 1.5 Flash
                 let response = await tryGeminiSignalRequest('gemini-1.5-flash');
                 let modelUsed = 'Flash';
 
                 console.log('📥 Respuesta HTTP (Señal):', response.status);
-
-                // Si falla, intentar con Gemini 1.5 Pro como fallback
-                if (!response.ok && (response.status === 404 || response.status === 403)) {
-                    console.log('⚠️ Flash no disponible, intentando con Pro...');
-                    response = await tryGeminiSignalRequest('gemini-1.5-pro');
-                    modelUsed = 'Pro';
-                    console.log('📥 Respuesta HTTP (Pro):', response.status);
-                }
 
                 if (!response.ok) {
                     const errorText = await response.text();
