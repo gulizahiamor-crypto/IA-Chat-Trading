@@ -628,11 +628,27 @@
         // ====================
         // GEMINI AI CHAT
         // ====================
-        // Sistema de gestión de API Key con localStorage
+        // Sistema de gestión de API Key con validación automática
         let CLAVE_DE_API_DE_GEMINI = localStorage.getItem('gemini_api_key') || 'AIzaSyBMuWEeFykC65XGlMcZck_JbaWZpPJ3UDw';
 
-        // Función para obtener la URL de API dinámica
+        // Validación de clave al cargar la página
+        function validarClaveAPI() {
+            if (!CLAVE_DE_API_DE_GEMINI || CLAVE_DE_API_DE_GEMINI === 'undefined' || CLAVE_DE_API_DE_GEMINI === '') {
+                console.warn('⚠️ API Key no configurada. Abriendo modal de configuración...');
+                setTimeout(() => {
+                    openConfigModal();
+                    addMessage('ai', '<div class="message-label">[ADVERTENCIA]</div><div>⚠️ No se detectó una API Key válida. Por favor, configura tu clave de Gemini usando el botón "⚙️ CONFIG API".</div>');
+                }, 1000);
+                return false;
+            }
+            return true;
+        }
+
+        // Función para obtener la URL de API dinámica con validación
         function getGeminiApiUrl() {
+            if (!CLAVE_DE_API_DE_GEMINI || CLAVE_DE_API_DE_GEMINI === 'undefined') {
+                throw new Error('API Key no configurada');
+            }
             return `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${CLAVE_DE_API_DE_GEMINI}`;
         }
 
@@ -672,6 +688,13 @@
             
             if (!message) return;
 
+            // Validar API Key antes de enviar
+            if (!CLAVE_DE_API_DE_GEMINI || CLAVE_DE_API_DE_GEMINI === 'undefined') {
+                addMessage('ai', '<div class="message-label">[ERROR]</div><div>⚠️ API Key no configurada. Usa el botón "⚙️ CONFIG API" para configurarla.</div>');
+                openConfigModal();
+                return;
+            }
+
             // Add user message
             addMessage('user', message);
             input.value = '';
@@ -680,7 +703,8 @@
             const loadingMsg = addMessage('ai', 'Analizando<span class="loading">...</span>');
 
             try {
-                const response = await fetch(getGeminiApiUrl(), {
+                const apiUrl = getGeminiApiUrl();
+                const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -698,16 +722,24 @@
                     })
                 });
 
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
                 const data = await response.json();
                 
-                if (data.candidates && data.candidates[0]) {
+                if (data.candidates && data.candidates[0] && data.candidates[0].content) {
                     const aiResponse = data.candidates[0].content.parts[0].text;
                     loadingMsg.innerHTML = `<div class="message-label">[GEMINI]</div><div>${aiResponse}</div>`;
+                } else if (data.error) {
+                    loadingMsg.innerHTML = `<div class="message-label">[ERROR]</div><div>Error de API: ${data.error.message || 'Error desconocido'}</div>`;
                 } else {
-                    loadingMsg.innerHTML = `<div class="message-label">[ERROR]</div><div>No se pudo obtener respuesta de Gemini.</div>`;
+                    loadingMsg.innerHTML = `<div class="message-label">[ERROR]</div><div>No se pudo obtener respuesta de Gemini. Verifica tu API Key.</div>`;
+                    openConfigModal();
                 }
             } catch (error) {
                 loadingMsg.innerHTML = `<div class="message-label">[ERROR]</div><div>Error de conexión: ${error.message}</div>`;
+                console.error('Error en sendMessage:', error);
             }
         }
 
@@ -742,8 +774,16 @@
             const output = document.getElementById('signalOutput');
             output.innerHTML = '<div style="text-align: center;">⚡ GENERANDO SEÑAL SMC<span class="loading">...</span></div>';
 
+            // Validar API Key antes de generar señal
+            if (!CLAVE_DE_API_DE_GEMINI || CLAVE_DE_API_DE_GEMINI === 'undefined') {
+                output.innerHTML = '<div style="color: #ff0000;">⚠️ API Key no configurada. Usa el botón "⚙️ CONFIG API".</div>';
+                openConfigModal();
+                return;
+            }
+
             try {
-                const response = await fetch(getGeminiApiUrl(), {
+                const apiUrl = getGeminiApiUrl();
+                const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -775,9 +815,13 @@ RR: [ratio]`
                     })
                 });
 
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
                 const data = await response.json();
                 
-                if (data.candidates && data.candidates[0]) {
+                if (data.candidates && data.candidates[0] && data.candidates[0].content) {
                     let signal = data.candidates[0].content.parts[0].text;
                     
                     // Format signal output
@@ -787,11 +831,16 @@ RR: [ratio]`
                     signal = signal.replace(/\n/g, '<br>');
                     
                     output.innerHTML = signal;
+                } else if (data.error) {
+                    output.innerHTML = `<div style="color: #ff0000;">Error de API: ${data.error.message || 'Error desconocido'}</div>`;
+                    openConfigModal();
                 } else {
-                    output.innerHTML = '<div style="color: #ff0000;">Error al generar señal. Intenta nuevamente.</div>';
+                    output.innerHTML = '<div style="color: #ff0000;">Error al generar señal. Verifica tu API Key.</div>';
+                    openConfigModal();
                 }
             } catch (error) {
                 output.innerHTML = `<div style="color: #ff0000;">Error: ${error.message}</div>`;
+                console.error('Error en generateSignal:', error);
             }
         }
 
@@ -836,6 +885,8 @@ RR: [ratio]`
         // Start radar on load
         window.addEventListener('load', () => {
             setTimeout(startLiquidityRadar, 2000);
+            // Validar API Key al cargar
+            validarClaveAPI();
         });
 
         // ====================
