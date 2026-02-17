@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IA-CHAT-TRADING | TERMINAL SMC</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000000;
+            color: #00ff41;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(90deg, #001100 0%, #003300 50%, #001100 100%);
+            border: 2px solid #00ff41;
+            border-radius: 10px;
+            box-shadow: 0 0 20px #00ff41, inset 0 0 20px rgba(0, 255, 65, 0.1);
+            margin-bottom: 20px;
+            animation: headerGlow 2s ease-in-out infinite;
+        }
+
+        @keyframes headerGlow {
+            0%, 100% { box-shadow: 0 0 20px #00ff41, inset 0 0 20px rgba(0, 255, 65, 0.1); }
+            50% { box-shadow: 0 0 30px #00ff41, inset 0 0 30px rgba(0, 255, 65, 0.2); }
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            text-shadow: 0 0 10px #00ff41, 0 0 20px #00ff41;
+            letter-spacing: 5px;
+            animation: textFlicker 3s infinite;
+        }
+
+        @keyframes textFlicker {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        .header p {
+            margin-top: 10px;
+            font-size: 1rem;
+            opacity: 0.8;
+        }
+
+        /* Main Grid */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        /* TradingView Chart */
+        .chart-container {
+            background: #000000;
+            border: 3px solid #00ff41;
+            border-radius: 10px;
+            padding: 10px;
+            box-shadow: 0 0 30px #00ff41;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .chart-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 65, 0.3), transparent);
+            animation: scanline 3s infinite;
+        }
+
+        @keyframes scanline {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .chart-header {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            text-align: center;
+            text-shadow: 0 0 10px #00ff41;
+        }
+
+        #tradingviewChart {
+            height: 600px !important;
+            display: block !important;
+            border: 1px solid #003300;
+            border-radius: 5px;
+            background: #000000;
+        }
+
+        /* Chat Panel */
+        .chat-panel {
+            background: #000000;
+            border: 3px solid #00ff41;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 0 30px #00ff41;
+            display: flex;
+            flex-direction: column;
+            height: 660px;
+        }
+
+        .chat-header {
+            font-size: 1.2rem;
+            text-align: center;
+            margin-bottom: 15px;
+            text-shadow: 0 0 10px #00ff41;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #00ff41;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(0, 51, 0, 0.3);
+            border: 1px solid #003300;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .chat-messages::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: #001100;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: #00ff41;
+            border-radius: 4px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            background: rgba(0, 255, 65, 0.1);
+            border-left: 3px solid #00ff41;
+        }
+
+        .message.ai {
+            background: rgba(0, 100, 255, 0.1);
+            border-left: 3px solid #0066ff;
+            color: #00ccff;
+        }
+
+        .message-label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 0.85rem;
+        }
+
+        .chat-input-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        #chatInput {
+            flex: 1;
+            background: #001100;
+            border: 2px solid #00ff41;
+            color: #00ff41;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        #chatInput:focus {
+            outline: none;
+            box-shadow: 0 0 10px #00ff41;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #003300, #006600);
+            border: 2px solid #00ff41;
+            color: #00ff41;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            text-transform: uppercase;
+            transition: all 0.3s;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
+        }
+
+        .btn:hover {
+            background: linear-gradient(135deg, #006600, #009900);
+            box-shadow: 0 0 20px #00ff41;
+            transform: translateY(-2px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        /* SMC Modules */
+        .smc-modules {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .module {
+            background: #000000;
+            border: 3px solid #00ff41;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 25px #00ff41;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .module::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00ff41, transparent);
+            animation: lineMove 2s infinite;
+        }
+
+        @keyframes lineMove {
+            0%, 100% { transform: translateX(-100%); }
+            50% { transform: translateX(100%); }
+        }
+
+        .module-header {
+            font-size: 1.3rem;
+            text-align: center;
+            margin-bottom: 15px;
+            text-shadow: 0 0 10px #00ff41;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .signal-btn {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+            animation: pulseBtn 2s infinite;
+        }
+
+        @keyframes pulseBtn {
+            0%, 100% { box-shadow: 0 0 10px rgba(0, 255, 65, 0.5); }
+            50% { box-shadow: 0 0 25px rgba(0, 255, 65, 0.8); }
+        }
+
+        .signal-output {
+            background: rgba(0, 51, 0, 0.3);
+            border: 1px solid #003300;
+            border-radius: 5px;
+            padding: 15px;
+            min-height: 150px;
+            font-size: 0.95rem;
+            line-height: 1.8;
+        }
+
+        .signal-output .entry {
+            color: #ffff00;
+            font-weight: bold;
+        }
+
+        .signal-output .sl {
+            color: #ff0000;
+            font-weight: bold;
+        }
+
+        .signal-output .tp {
+            color: #00ff00;
+            font-weight: bold;
+        }
+
+        /* Radar de Liquidez */
+        .radar-logs {
+            background: rgba(0, 51, 0, 0.3);
+            border: 1px solid #003300;
+            border-radius: 5px;
+            padding: 15px;
+            height: 300px;
+            overflow-y: auto;
+            font-size: 0.85rem;
+            line-height: 1.6;
+        }
+
+        .radar-logs::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .radar-logs::-webkit-scrollbar-track {
+            background: #001100;
+        }
+
+        .radar-logs::-webkit-scrollbar-thumb {
+            background: #00ff41;
+            border-radius: 3px;
+        }
+
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 5px;
+            border-left: 2px solid #00ff41;
+            padding-left: 10px;
+            animation: logAppear 0.5s ease-in;
+        }
+
+        @keyframes logAppear {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .log-timestamp {
+            color: #666666;
+            font-size: 0.75rem;
+        }
+
+        .log-type-ob {
+            color: #ffaa00;
+        }
+
+        .log-type-bos {
+            color: #ff00ff;
+        }
+
+        .log-type-fvg {
+            color: #00ffff;
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            animation: dots 1.5s infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .smc-modules {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Status Indicator */
+        .status-indicator {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid #00ff41;
+            border-radius: 5px;
+            padding: 10px 15px;
+            font-size: 0.8rem;
+            box-shadow: 0 0 15px #00ff41;
+            z-index: 1000;
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #00ff41;
+            margin-right: 8px;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50%, 100% { opacity: 1; }
+            25%, 75% { opacity: 0.3; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Status Indicator -->
+    <div class="status-indicator">
+        <span class="status-dot"></span>
+        <span>SISTEMA ACTIVO</span>
+    </div>
+
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>⚡ IA-CHAT-TRADING ⚡</h1>
+            <p>[ TERMINAL SMC | GOLD TRADING SYSTEM | POWERED BY GEMINI ]</p>
+        </div>
+
+        <!-- Main Grid -->
+        <div class="main-grid">
+            <!-- TradingView Chart -->
+            <div class="chart-container">
+                <div class="chart-header">📈 XAUUSD | GOLD LIVE CHART 📈</div>
+                <div id="tradingviewChart"></div>
+            </div>
+
+            <!-- Chat Panel -->
+            <div class="chat-panel">
+                <div class="chat-header">🤖 GEMINI AI ASSISTANT 🤖</div>
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message ai">
+                        <div class="message-label">[SISTEMA]</div>
+                        <div>Terminal iniciado. Gemini conectado. Listo para analizar XAUUSD.</div>
+                    </div>
+                </div>
+                <div class="chat-input-container">
+                    <input type="text" id="chatInput" placeholder="Escribe tu consulta..." />
+                    <button class="btn" onclick="sendMessage()">ENVIAR</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SMC Modules -->
+        <div class="smc-modules">
+            <!-- Signal Generator -->
+            <div class="module">
+                <div class="module-header">⚡ GENERADOR DE SEÑALES ⚡</div>
+                <button class="btn signal-btn" onclick="generateSignal()">GENERAR SEÑAL SMC</button>
+                <div class="signal-output" id="signalOutput">
+                    <div style="text-align: center; opacity: 0.6;">
+                        Presiona el botón para generar una señal de trading basada en Smart Money Concepts
+                    </div>
+                </div>
+            </div>
+
+            <!-- Liquidity Radar -->
+            <div class="module">
+                <div class="module-header">🎯 RADAR DE LIQUIDEZ 🎯</div>
+                <div class="radar-logs" id="radarLogs">
+                    <div style="text-align: center; opacity: 0.6;">
+                        Iniciando escaneo de liquidez...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TradingView Widget Script -->
+    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+
+    <script>
+        // ====================
+        // TRADINGVIEW CHART
+        // ====================
+        function initTradingViewChart() {
+            new TradingView.widget({
+                "autosize": false,
+                "width": "100%",
+                "height": 600,
+                "symbol": "OANDA:XAUUSD",
+                "interval": "15",
+                "timezone": "Etc/UTC",
+                "theme": "dark",
+                "style": "1",
+                "locale": "es",
+                "toolbar_bg": "#000000",
+                "enable_publishing": false,
+                "hide_side_toolbar": false,
+                "allow_symbol_change": true,
+                "container_id": "tradingviewChart",
+                "backgroundColor": "#000000",
+                "gridColor": "#003300",
+                "studies": [
+                    "BB@tv-basicstudies"
+                ]
+            });
+        }
+
+        // Inicializar gráfico al cargar
+        window.addEventListener('load', () => {
+            initTradingViewChart();
+        });
+
+        // ====================
+        // GEMINI AI CHAT
+        // ====================
+        const GEMINI_API_KEY = 'AIzaSyBMuWEeFykC65XGlMcZck_JbaWZpPJ3UDw';
+        const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+        async function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+
+            // Add user message
+            addMessage('user', message);
+            input.value = '';
+
+            // Add loading message
+            const loadingMsg = addMessage('ai', 'Analizando<span class="loading">...</span>');
+
+            try {
+                const response = await fetch(GEMINI_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{
+                                text: `Eres un experto trader especializado en Smart Money Concepts (SMC) para XAUUSD. ${message}`
+                            }]
+                        }],
+                        generationConfig: {
+                            temperature: 0.7,
+                            maxOutputTokens: 1000
+                        }
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.candidates && data.candidates[0]) {
+                    const aiResponse = data.candidates[0].content.parts[0].text;
+                    loadingMsg.innerHTML = `<div class="message-label">[GEMINI]</div><div>${aiResponse}</div>`;
+                } else {
+                    loadingMsg.innerHTML = `<div class="message-label">[ERROR]</div><div>No se pudo obtener respuesta de Gemini.</div>`;
+                }
+            } catch (error) {
+                loadingMsg.innerHTML = `<div class="message-label">[ERROR]</div><div>Error de conexión: ${error.message}</div>`;
+            }
+        }
+
+        function addMessage(type, content) {
+            const messagesDiv = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            
+            if (type === 'user') {
+                messageDiv.innerHTML = `<div class="message-label">[TÚ]</div><div>${content}</div>`;
+            } else {
+                messageDiv.innerHTML = content;
+            }
+            
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            
+            return messageDiv;
+        }
+
+        // Enter key support
+        document.getElementById('chatInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // ====================
+        // SIGNAL GENERATOR
+        // ====================
+        async function generateSignal() {
+            const output = document.getElementById('signalOutput');
+            output.innerHTML = '<div style="text-align: center;">⚡ GENERANDO SEÑAL SMC<span class="loading">...</span></div>';
+
+            try {
+                const response = await fetch(GEMINI_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{
+                                text: `Eres un experto en Smart Money Concepts. Genera una señal de trading para XAUUSD con los siguientes datos:
+- ENTRADA (precio exacto)
+- STOP LOSS (precio exacto)
+- TAKE PROFIT (precio exacto)
+- DIRECCIÓN (LONG/SHORT)
+- RAZÓN SMC (Order Block, BOS, Fair Value Gap, etc.)
+- RR (Risk:Reward ratio)
+
+Formato: 
+SEÑAL: [LONG/SHORT]
+ENTRADA: [precio]
+STOP LOSS: [precio]
+TAKE PROFIT: [precio]
+RAZÓN: [explicación SMC breve]
+RR: [ratio]`
+                            }]
+                        }],
+                        generationConfig: {
+                            temperature: 0.8,
+                            maxOutputTokens: 500
+                        }
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.candidates && data.candidates[0]) {
+                    let signal = data.candidates[0].content.parts[0].text;
+                    
+                    // Format signal output
+                    signal = signal.replace(/ENTRADA:/g, '<span class="entry">ENTRADA:</span>');
+                    signal = signal.replace(/STOP LOSS:/g, '<span class="sl">STOP LOSS:</span>');
+                    signal = signal.replace(/TAKE PROFIT:/g, '<span class="tp">TAKE PROFIT:</span>');
+                    signal = signal.replace(/\n/g, '<br>');
+                    
+                    output.innerHTML = signal;
+                } else {
+                    output.innerHTML = '<div style="color: #ff0000;">Error al generar señal. Intenta nuevamente.</div>';
+                }
+            } catch (error) {
+                output.innerHTML = `<div style="color: #ff0000;">Error: ${error.message}</div>`;
+            }
+        }
+
+        // ====================
+        // LIQUIDITY RADAR
+        // ====================
+        const radarPatterns = [
+            { type: 'ob', label: 'Order Block detectado', class: 'log-type-ob' },
+            { type: 'bos', label: 'Break of Structure', class: 'log-type-bos' },
+            { type: 'fvg', label: 'Fair Value Gap identificado', class: 'log-type-fvg' },
+            { type: 'ob', label: 'Order Block alcista formado', class: 'log-type-ob' },
+            { type: 'bos', label: 'BOS bajista confirmado', class: 'log-type-bos' },
+            { type: 'fvg', label: 'FVG en zona de demanda', class: 'log-type-fvg' }
+        ];
+
+        function startLiquidityRadar() {
+            const logsDiv = document.getElementById('radarLogs');
+            logsDiv.innerHTML = '';
+
+            setInterval(() => {
+                const pattern = radarPatterns[Math.floor(Math.random() * radarPatterns.length)];
+                const price = (2000 + Math.random() * 100).toFixed(2);
+                const timestamp = new Date().toLocaleTimeString('es-ES');
+                
+                const logEntry = document.createElement('div');
+                logEntry.className = 'log-entry';
+                logEntry.innerHTML = `
+                    <span class="log-timestamp">[${timestamp}]</span>
+                    <span class="${pattern.class}"> ▶ ${pattern.label}</span>
+                    <span style="color: #00ff41;"> @ $${price}</span>
+                `;
+                
+                logsDiv.insertBefore(logEntry, logsDiv.firstChild);
+                
+                // Keep only last 20 logs
+                while (logsDiv.children.length > 20) {
+                    logsDiv.removeChild(logsDiv.lastChild);
+                }
+            }, 3000 + Math.random() * 4000); // Random interval 3-7 seconds
+        }
+
+        // Start radar on load
+        window.addEventListener('load', () => {
+            setTimeout(startLiquidityRadar, 2000);
+        });
+
+        // ====================
+        // MATRIX RAIN EFFECT (OPTIONAL ENHANCEMENT)
+        // ====================
+        function createMatrixRain() {
+            const canvas = document.createElement('canvas');
+            canvas.style.position = 'fixed';
+            canvas.style.top = '0';
+            canvas.style.left = '0';
+            canvas.style.width = '100%';
+            canvas.style.height = '100%';
+            canvas.style.zIndex = '-1';
+            canvas.style.opacity = '0.1';
+            document.body.appendChild(canvas);
+
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            const chars = '01';
+            const fontSize = 14;
+            const columns = canvas.width / fontSize;
+            const drops = Array(Math.floor(columns)).fill(1);
+
+            function draw() {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                ctx.fillStyle = '#00ff41';
+                ctx.font = fontSize + 'px monospace';
+
+                for (let i = 0; i < drops.length; i++) {
+                    const text = chars[Math.floor(Math.random() * chars.length)];
+                    ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+                    if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                        drops[i] = 0;
+                    }
+                    drops[i]++;
+                }
+            }
+
+            setInterval(draw, 33);
+        }
+
+        // Activate Matrix Rain
+        window.addEventListener('load', createMatrixRain);
+    </script>
+</body>
+</html>
